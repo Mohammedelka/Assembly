@@ -1,0 +1,107 @@
+ ORG    $1000
+START:                  ; first instruction of program
+
+  lea pile(pc),a7
+     lea list(pc),a0
+     * Display hardware window 
+        MOVE.B  #32,D0 
+        MOVE.B  #00,D1 
+        TRAP    #15 
+        move.b	#32,d0			trap task to get address of hardware
+	    move.b	#0,d1
+	    trap	#15				display hardware window
+	    move.b	#1,d1
+	    trap	#15				get address of 7-segment display
+	    move.l	d1,a2			A4 = Address of 7-segment display
+	    move.b	#2,d1
+	    trap	#15				get address of LEDs
+	    move.l	d1,a3			A3 = Address of LEDs
+	    move.l  a2,a4
+	    move  #8,d4
+loop1   move.w  #00,(a2)+
+        dbra    d4,loop1
+       
+switch equ $00E00012
+loop     move.b switch,d2    ;il faut cliquer sur le premier switch manuellement avant de commencer 
+         cmp.b #01,d2
+         bne loop
+         bra principal
+         
+         move #9,d0              *
+         trap #15
+         
+principal  move #14,d0
+           lea text,a1
+           trap #15 
+           move #4,d0
+           trap #15
+           bra recherche
+           rts
+********************************
+recherche clr d0 
+boucle    add #1,d0
+          cmp (a0)+,d1
+          beq aff1
+          cmp #4,d0
+          bne boucle
+          bra aff2
+          rts
+****************************
+aff2       move #14,d0
+          lea message2,a1
+          trap #15
+          move #5,d0
+          trap #15
+          BRA  closed
+***************************
+aff1      move #14,d0
+          lea message1,a1
+          trap #15
+          move #5,d0
+          trap #15
+          BRA  open
+****************************
+open      move.b  #63,(a4)+
+          move.b  #0,(a4)+
+          move.b  #115,(a4)+
+          move.b  #0,(a4)+
+          move.b  #121,(a4)+
+          move.b  #0,(a4)+
+          move.b  #84,(a4)+
+          bra     ledsopen
+*****************************
+ledsopen  move.b  #3,(a3)
+          bra     exit
+*****************************
+closed    move.b  #57,(a4)+
+          move.b  #00,(a4)+
+          move.b  #56,(a4)+
+          move.b  #00,(a4)+
+          move.b  #63,(a4)+
+          move.b  #00,(a4)+
+          move.b  #109,(a4)+
+          move.b  #00,(a4)+
+          move.b  #121,(a4)+
+          bra     ledsclose
+*****************************
+ledsclose move.b   #192,(a3)
+          bra      exit
+*****************************
+exit     move #9,d0              
+         trap #15
+          
+           
+
+     
+    SIMHALT             ; halt simulator
+
+* Put variables and constants here
+     ds  100
+pile ds  1
+list dc  7020,8011,1234,8410,0
+text dc  'entrer le code :',$0D,$0A,0
+message1 dc 'le code existe dans la liste.',0
+message2 dc 'le code pas dans la liste.',0    
+     END     START       ; last line of source
+
+

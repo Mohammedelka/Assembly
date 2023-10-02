@@ -1,0 +1,473 @@
+00001000 Starting Address
+Assembler used: EASy68K Editor/Assembler v5.16.01
+Created On: 12/26/2021 9:38:51 PM
+
+00000000                             1  *-----------------------------------------------------------
+00000000                             2  * Program Number: v1.0
+00000000                             3  * Written by    : Chuck Kelly
+00000000                             4  * Date Created  : May-19-2002
+00000000                             5  * Description   : A clock to test EASy68k simulator graphics and timer.
+00000000                             6  *
+00000000                             7  * The graphics resolution is 640 x 480 with 0,0 at the top left.
+00000000                             8  *
+00000000                             9  * Simulator Trap code for timer
+00000000                            10  * 8 - Return time in hundredths of a second since midnight in D1.L. 
+00000000                            11  *
+00000000                            12  * Simulator Trap codes for graphics (see help)
+00000000                            13  *
+00000000                            14  * Modifications:
+00000000                            15  * March-23-2003 by CK, Added sounds
+00000000                            16  *-----------------------------------------------------------
+00000800                            17      ORG $800
+00000800                            18  
+00000800  =00000000                 19  BLACK      EQU    $00000000
+00000800  =00000080                 20  MAROON     EQU    $00000080
+00000800  =00008000                 21  GREEN      EQU    $00008000
+00000800  =00008080                 22  OLIVE      EQU    $00008080
+00000800  =00800000                 23  NAVY       EQU    $00800000
+00000800  =00800080                 24  PURPLE     EQU    $00800080
+00000800  =00808000                 25  TEAL       EQU    $00808000
+00000800  =00808080                 26  GRAY       EQU    $00808080
+00000800  =000000FF                 27  RED        EQU    $000000FF
+00000800  =0000FF00                 28  LIME       EQU    $0000FF00
+00000800  =0000FFFF                 29  YELLOW     EQU    $0000FFFF
+00000800  =00FF0000                 30  BLUE       EQU    $00FF0000
+00000800  =00FF00FF                 31  FUCHSIA    EQU    $00FF00FF
+00000800  =00FFFF00                 32  AQUA       EQU    $00FFFF00
+00000800  =00C0C0C0                 33  LTGRAY     EQU    $00C0C0C0
+00000800  =00FFFFFF                 34  WHITE      EQU    $00FFFFFF
+00000800                            35  
+00000800  =00000078                 36  SIZE_H     EQU    120   size of hour hand in pixels
+00000800  =000000A0                 37  SIZE_M     EQU    160   "    "  minute   "     "
+00000800  =000000BE                 38  SIZE_S     EQU    190   "    "  second   "     "
+00000800                            39  
+00000800  =000000D8                 40  CENTERX    EQU    216   X coordinate of clock center
+00000800  =000000D9                 41  CENTERY    EQU    217   Y     "            "     "
+00000800  =000000CC                 42  DIAMETER   EQU    204   diameter of clock face
+00000800                            43  
+00000800  =0041EB00                 44  NOON       EQU    12*60*60*100  noon in 100's of a second
+00000800                            45  
+00000800                            46  * variables
+00000800                            47  hourHand   ds.w 1
+00000802                            48  minHand    ds.w 1
+00000804                            49  secHand    ds.w 1
+00000806                            50  Xdir       ds.w 1
+00000808                            51  Ydir       ds.w 1
+0000080A                            52  chimeCount ds.b 1
+0000080B                            53  
+00001000                            54      org $1000
+00001000                            55  START
+00001000                            56  
+00001000                            57  * Initialize variables
+00001000  31FC 0000 0800            58      move.w   #0,hourHand
+00001006  31FC 0000 0802            59      move.w   #0,minHand
+0000100C  31FC 0000 0804            60      move.w   #0,secHand
+00001012  11FC 0000 080A            61      move.b   #0,chimeCount
+00001018                            62  
+00001018                            63  * Load sounds into memory
+00001018  43F9 000013D0             64      lea tick,a1     load wav
+0000101E  323C 0000                 65      move    #0,d1       sound number 0
+00001022  303C 0047                 66      move    #71,d0
+00001026  4E4F                      67      trap    #15
+00001028                            68  
+00001028  43F9 000013D9             69      lea tock,a1     load wav
+0000102E  323C 0001                 70      move    #1,d1       sound number 1
+00001032  303C 0047                 71      move    #71,d0
+00001036  4E4F                      72      trap    #15
+00001038                            73  
+00001038  43F9 000013C6             74      lea chime,a1    load wav
+0000103E  323C 0002                 75      move    #2,d1       sound number 2
+00001042  303C 0047                 76      move    #71,d0
+00001046  4E4F                      77      trap    #15
+00001048                            78  
+00001048                            79  * draw face of clock
+00001048  223C 00FF0000             80      move.l   #BLUE,d1
+0000104E  103C 0050                 81      move.b   #80,d0
+00001052  4E4F                      82      trap     #15        set line color
+00001054                            83  
+00001054  223C 00800000             84      move.l   #NAVY,d1
+0000105A  103C 0051                 85      move.b   #81,d0
+0000105E  4E4F                      86      trap     #15        set fill color
+00001060                            87  
+00001060  720C                      88      move.l   #CENTERX-DIAMETER,d1   X1
+00001062  740D                      89      move.l   #CENTERY-DIAMETER,d2   Y1
+00001064  263C 000001A4             90      move.l   #CENTERX+DIAMETER,d3   X2
+0000106A  283C 000001A5             91      move.l   #CENTERY+DIAMETER,d4   Y2
+00001070  103C 0058                 92      move.b   #88,d0
+00001074  4E4F                      93      trap     #15        ellipse
+00001076                            94      
+00001076  721A                      95      move.l   #26,d1     Col
+00001078  E181                      96      asl.l    #8,d1
+0000107A  123C 0001                 97      move.b   #1,d1      Row
+0000107E  103C 000B                 98      move.b   #11,d0
+00001082  4E4F                      99      trap     #15        goto Row,Col
+00001084                           100  
+00001084  720C                     101      move.l   #12,d1     12
+00001086  103C 0003                102      move.b   #3,d0
+0000108A  4E4F                     103      trap     #15
+0000108C                           104  
+0000108C  721A                     105      move.l   #26,d1     Col
+0000108E  E181                     106      asl.l    #8,d1
+00001090  123C 001B                107      move.b   #27,d1     Row
+00001094  103C 000B                108      move.b   #11,d0
+00001098  4E4F                     109      trap     #15        goto Row,Col
+0000109A                           110  
+0000109A  7206                     111      move.l   #6,d1      6
+0000109C  103C 0003                112      move.b   #3,d0
+000010A0  4E4F                     113      trap     #15
+000010A2                           114  
+000010A2  7233                     115      move.l   #51,d1     Col
+000010A4  E181                     116      asl.l    #8,d1
+000010A6  123C 000E                117      move.b   #14,d1     Row
+000010AA  103C 000B                118      move.b   #11,d0
+000010AE  4E4F                     119      trap     #15        goto Row,Col
+000010B0                           120  
+000010B0  7203                     121      move.l   #3,d1      3
+000010B2  103C 0003                122      move.b   #3,d0
+000010B6  4E4F                     123      trap     #15
+000010B8                           124  
+000010B8  7202                     125      move.l   #2,d1      Col
+000010BA  E181                     126      asl.l    #8,d1
+000010BC  123C 000E                127      move.b   #14,d1     Row
+000010C0  103C 000B                128      move.b   #11,d0
+000010C4  4E4F                     129      trap     #15        goto Row,Col
+000010C6                           130  
+000010C6  7209                     131      move.l   #9,d1      9
+000010C8  103C 0003                132      move.b   #3,d0
+000010CC  4E4F                     133      trap     #15
+000010CE                           134  
+000010CE                           135  LOOP
+000010CE                           136  
+000010CE                           137  * Read timer, get 100ths of a second since midnight in D1.L
+000010CE                           138  
+000010CE  103C 0008                139      move.b   #8,d0
+000010D2  4E4F                     140      trap     #15
+000010D4                           141  
+000010D4  B2BC 0041EB00            142      cmp.l    #NOON,d1   if (time >= NOON)
+000010DA  6500 0008                143      blo      am
+000010DE  0481 0041EB00            144      sub.l    #NOON,d1   time = time - NOON
+000010E4                           145  
+000010E4                           146  * Calculate total minutes (D5), minutes this hour (D6), seconds (D7)
+000010E4                           147  
+000010E4  82FC 0064                148  am  divu     #100,d1    convert to seconds
+000010E8  0281 0000FFFF            149      andi.l   #$0000ffff,d1  discard fractional seconds
+000010EE  82FC 003C                150      divu     #60,d1     convert to minutes
+000010F2  2E01                     151      move.l   d1,d7
+000010F4  7010                     152      move.l   #16,d0 
+000010F6  E0AF                     153      lsr.l    d0,d7      d7 = seconds
+000010F8  0281 0000FFFF            154      andi.l   #$0000ffff,d1  discard seconds from d1
+000010FE  2A01                     155      move.l   d1,d5      d5 = total minutes
+00001100  82FC 003C                156      divu     #60,d1     convert to hours
+00001104  2C01                     157      move.l   d1,d6
+00001106  7010                     158      move.l   #16,d0
+00001108  E0AE                     159      lsr.l    d0,d6      minutes this hour to d6
+0000110A  BE78 0804                160      cmp.w      secHand,d7   if second has not elapsed
+0000110E  67BE                     161      beq      loop
+00001110                           162  
+00001110                           163  * Check for top of the hour
+00001110  4A87                     164      tst.l    d7     check seconds in minute
+00001112  6600 001A                165      bne      sounds     not top of the hour
+00001116  4A86                     166      tst.l    d6     check minutes in hour
+00001118  6600 0014                167      bne      sounds     not top of the hour
+0000111C  2205                     168      move.l   d5,d1      total minutes
+0000111E  82FC 003C                169      divu     #60,d1     total minutes/60 = hours
+00001122  6600 0006                170      bne      not12      not 12 o'clock
+00001126  123C 000C                171      move.b   #12,d1
+0000112A  11C1 080A                172  not12   move.b   d1,chimeCount  number of times to chime
+0000112E                           173  
+0000112E                           174  * play clock sounds from memory
+0000112E                           175  sounds:
+0000112E  4A38 080A                176      tst.b    chimeCount play chime?
+00001132  6700 001C                177      beq      ticktock   no chime
+00001136  0807 0000                178      btst     #0,d7      even seconds? play chime on even seconds
+0000113A  6600 0034                179      bne      checkHour  if no
+0000113E  323C 0002                180      move     #2,d1      play chime
+00001142  303C 0048                181      move     #72,d0
+00001146  4E4F                     182      trap     #15
+00001148  5338 080A                183      subq.b   #1,chimeCount  decrement chime count
+0000114C  6000 0022                184      bra      checkHour
+00001150                           185  
+00001150                           186  ticktock:
+00001150  0807 0000                187      btst     #0,d7
+00001154  6700 0010                188      beq      tockwav
+00001158  323C 0000                189      move     #0,d1      play tick
+0000115C  303C 0048                190      move     #72,d0
+00001160  4E4F                     191      trap     #15
+00001162  6000 000C                192      bra      checkHour
+00001166                           193  
+00001166                           194  tockwav:
+00001166  323C 0001                195      move     #1,d1      play tock
+0000116A  303C 0048                196      move     #72,d0
+0000116E  4E4F                     197      trap     #15
+00001170                           198  
+00001170                           199  * Calculate new position of clock hands
+00001170                           200  
+00001170                           201  * hour hand
+00001170                           202  checkHour:
+00001170  8AFC 000C                203      divu     #12,d5     total minutes/12 = 1 of 60 positions
+00001174  0285 0000FFFF            204      andi.l   #$0000ffff,d5  discard remainder
+0000117A  BA78 0800                205      cmp.w    hourHand,d5    if (new position <> old position)
+0000117E  6700 003A                206      beq      checkMin       
+00001182                           207  
+00001182                           208  * erase old hour hand
+00001182  123C 000F                209      move.b   #15,d1       set pen width
+00001186  103C 005D                210      move.b   #93,d0
+0000118A  4E4F                     211      trap     #15
+0000118C  3038 0800                212      move.w   hourHand,d0
+00001190  323C 0078                213      move.w   #SIZE_H,d1   size of hour hand
+00001194  6100 013C                214      bsr      handXY       returns end of hand as X2 in d3, Y2 in d4
+00001198  223C 00800000            215      move.l   #NAVY,d1
+0000119E  103C 0050                216      move.b   #80,d0
+000011A2  4E4F                     217      trap     #15          set line color
+000011A4  223C 000000D8            218      move.l   #CENTERX,d1      X1
+000011AA  243C 000000D9            219      move.l   #CENTERY,d2      Y1
+000011B0  103C 0054                220      move.b   #84,d0
+000011B4  4E4F                     221      trap     #15          erase hour hand from X1,Y1 to X2,Y2
+000011B6  31C5 0800                222      move.w   d5,hourHand      save new hour hand position
+000011BA                           223  
+000011BA                           224  checkMin:
+000011BA  BC78 0802                225      cmp.w    minHand,d6 if (new position <> old position)
+000011BE  6700 003A                226      beq      eraseSec
+000011C2                           227  
+000011C2                           228  * erase old minute hand
+000011C2  123C 0005                229      move.b   #5,d1        set pen width
+000011C6  103C 005D                230      move.b   #93,d0
+000011CA  4E4F                     231      trap     #15
+000011CC  3038 0802                232      move.w   minHand,d0
+000011D0  323C 00A0                233      move.w   #SIZE_M,d1   size of minute hand
+000011D4  6100 00FC                234      bsr      handXY       returns end of hand as X2 in d3, Y2 in d4
+000011D8  223C 00800000            235      move.l   #NAVY,d1
+000011DE  103C 0050                236      move.b   #80,d0
+000011E2  4E4F                     237      trap     #15          set line color
+000011E4  223C 000000D8            238      move.l   #CENTERX,d1      X1
+000011EA  243C 000000D9            239      move.l   #CENTERY,d2      Y1
+000011F0  103C 0054                240      move.b   #84,d0
+000011F4  4E4F                     241      trap     #15          erase minute hand from X1,Y1 to X2,Y2
+000011F6  31C6 0802                242      move.w   d6,minHand   save new minute hand position
+000011FA                           243  
+000011FA                           244  * erase old second hand
+000011FA                           245  eraseSec:
+000011FA  123C 0002                246      move.b   #2,d1      set pen width
+000011FE  103C 005D                247      move.b   #93,d0
+00001202  4E4F                     248      trap     #15
+00001204  3038 0804                249      move.w   secHand,d0
+00001208  323C 00BE                250      move.w   #SIZE_S,d1 size of second hand
+0000120C  6100 00C4                251      bsr      handXY     returns end of hand as X2 in d3, Y2 in d4
+00001210  223C 00800000            252      move.l   #NAVY,d1
+00001216  103C 0050                253      move.b   #80,d0
+0000121A  4E4F                     254      trap     #15        set line color
+0000121C  223C 000000D8            255      move.l   #CENTERX,d1    X1
+00001222  243C 000000D9            256      move.l   #CENTERY,d2    Y1
+00001228  103C 0054                257      move.b   #84,d0
+0000122C  4E4F                     258      trap     #15        erase minute hand from X1,Y1 to X2,Y2
+0000122E  31C7 0804                259      move.w   d7,secHand save new second hand position
+00001232                           260  
+00001232                           261  * draw new hour hand
+00001232  123C 000F                262      move.b   #15,d1     set pen width
+00001236  103C 005D                263      move.b   #93,d0
+0000123A  4E4F                     264      trap     #15
+0000123C  3005                     265      move.w   d5,d0
+0000123E  323C 0078                266      move.w   #SIZE_H,d1 size of hour hand
+00001242  6100 008E                267      bsr      handXY     returns end of hand as X2 in d3, Y2 in d4
+00001246  223C 00008000            268      move.l   #GREEN,d1
+0000124C  103C 0050                269      move.b   #80,d0
+00001250  4E4F                     270      trap     #15        set line color
+00001252  223C 000000D8            271      move.l   #CENTERX,d1    X1
+00001258  243C 000000D9            272      move.l   #CENTERY,d2    Y1
+0000125E  103C 0054                273      move.b   #84,d0
+00001262  4E4F                     274      trap     #15        draw hour hand from X1,Y1 to X2,Y2
+00001264                           275  
+00001264                           276  * draw new minute hand
+00001264  123C 0005                277      move.b   #5,d1      set pen width
+00001268  103C 005D                278      move.b   #93,d0
+0000126C  4E4F                     279      trap     #15
+0000126E  3006                     280      move.w   d6,d0
+00001270  323C 00A0                281      move.w   #SIZE_M,d1 size of minute hand
+00001274  6100 005C                282      bsr      handXY     returns end of hand as X2 in d3, Y2 in d4
+00001278  223C 0000FFFF            283      move.l   #YELLOW,d1
+0000127E  103C 0050                284      move.b   #80,d0
+00001282  4E4F                     285      trap     #15        set line color
+00001284  223C 000000D8            286      move.l   #CENTERX,d1    X1
+0000128A  243C 000000D9            287      move.l   #CENTERY,d2    Y1
+00001290  103C 0054                288      move.b   #84,d0
+00001294  4E4F                     289      trap     #15
+00001296                           290  
+00001296                           291  * draw new second hand
+00001296  123C 0002                292      move.b   #2,d1      set pen width
+0000129A  103C 005D                293      move.b   #93,d0
+0000129E  4E4F                     294      trap     #15
+000012A0  3007                     295      move.w   d7,d0      endif
+000012A2  323C 00BE                296      move.w   #SIZE_S,d1 size of second hand
+000012A6  6100 002A                297      bsr      handXY     returns end of hand as X2 in d3, Y2 in d4
+000012AA  223C 00FFFF00            298      move.l   #AQUA,d1
+000012B0  103C 0050                299      move.b   #80,d0
+000012B4  4E4F                     300      trap     #15        set line color
+000012B6  223C 000000D8            301      move.l   #CENTERX,d1    X1
+000012BC  243C 000000D9            302      move.l   #CENTERY,d2    Y1
+000012C2  103C 0054                303      move.b   #84,d0
+000012C6  4E4F                     304      trap     #15
+000012C8                           305  
+000012C8  6000 FE04                306      bra      loop       loop forever
+000012CC                           307  
+000012CC  103C 0009                308      move.b  #9,d0
+000012D0  4E4F                     309      trap    #15     HALT SIMULATOR
+000012D2                           310  
+000012D2                           311  
+000012D2                           312  *-----------------------------------------------------------------------------------
+000012D2                           313  * The following subroutine calculates the X,Y position of the end of the clock hand.
+000012D2                           314  * Pre: d0.w = position of hand as 0 - 60
+000012D2                           315  *      d1.w = length of hand in pixels
+000012D2                           316  * Post: d3 = X, d4 = Y
+000012D2                           317  handXY:
+000012D2  48E7 E000                318      movem.l  d0-d2,-(a7)    save registers
+000012D6  B07C 002D                319      cmp      #45,d0     if (position >= 45)
+000012DA  6500 0018                320      blo      try30
+000012DE  343C 003C                321      move.w   #60,d2
+000012E2  9440                     322      sub.w    d0,d2        index = 60 - position
+000012E4  31FC FFFF 0808           323      move.w   #-1,Ydir     subtract handY from centerY
+000012EA  31FC FFFF 0806           324      move.w   #-1,Xdir     subtract handX from centerX
+000012F0  6000 004C                325      bra      getXY
+000012F4                           326  
+000012F4  B07C 001E                327  try30   cmp      #30,d0     else if (position >= 30)
+000012F8  6500 0018                328      blo      try15
+000012FC  3400                     329      move.w   d0,d2
+000012FE  0442 001E                330      sub.w      #30,d2     index = position - 30
+00001302  31FC 0001 0808           331      move.w   #1,Ydir      add handY to centerY
+00001308  31FC FFFF 0806           332      move.w   #-1,Xdir     subtract handX from centerX
+0000130E  6000 002E                333      bra      getXY
+00001312                           334  
+00001312  B07C 000F                335  try15   cmp      #15,d0     else if (position >= 15)
+00001316  6500 0018                336      blo      do15
+0000131A  343C 001E                337      move.w   #30,d2
+0000131E  9440                     338      sub.w    d0,d2        index = 30 - position
+00001320  31FC 0001 0808           339      move.w   #1,Ydir      add handY to centerY
+00001326  31FC 0001 0806           340      move.w   #1,Xdir      add handX to centerX
+0000132C  6000 0010                341      bra      getXY      else
+00001330                           342  
+00001330  3400                     343  do15    move.w   d0,d2        index = position
+00001332  31FC FFFF 0808           344      move.w   #-1,Ydir     subtract handY from centerY
+00001338  31FC 0001 0806           345      move.w   #1,Xdir      add handX to centerX
+0000133E                           346  
+0000133E  E342                     347  getXY   asl.w    #1,d2      endif, index = index * 2 for word data
+00001340  41F9 000013A6            348      lea      cosTable,a0
+00001346  3630 2000                349      move.w   (a0,d2),d3 X = cos(position) * 1000
+0000134A  C6C1                     350      mulu     d1,d3      X = X * length
+0000134C  86FC 03E8                351      divu     #1000,d3   X = X / 1000
+00001350  0283 0000FFFF            352      andi.l   #$0000ffff,d3  discard remainder
+00001356  C7F8 0806                353      muls.w   Xdir,d3    X = X * Xdir
+0000135A  0683 000000D8            354      add.l    #CENTERX,d3    X = X + CENTERX
+00001360                           355  
+00001360  41F9 00001386            356      lea      sinTable,a0
+00001366  3830 2000                357      move.w   (a0,d2),d4 Y = sin(position) * 1000
+0000136A  C8C1                     358      mulu     d1,d4      Y = Y * length
+0000136C  88FC 03E8                359      divu     #1000,d4   Y = Y / 1000
+00001370  0284 0000FFFF            360      andi.l   #$0000ffff,d4  discard remainder
+00001376  C9F8 0808                361      muls.w   Ydir,d4    Y = Y * Ydir
+0000137A  0684 000000D9            362      add.l    #CENTERY,d4    Y = Y + CENTERY
+00001380                           363  
+00001380  4CDF 0007                364      movem.l  (a7)+,d0-d2    restore registers
+00001384  4E75                     365      rts
+00001386                           366  
+00001386                           367  
+00001386                           368  * The following tables are used to calculate the end points of the clock hands
+00001386                           369  
+00001386                           370  * Sin of angle formed at 1 second intervals from 12:00 to 3:00 * 1000
+00001386                           371  sinTable:
+00001386= 03E8                     372      dc.w    1000        0 seconds
+00001388= 03E3                     373      dc.w    995
+0000138A= 03D2                     374      dc.w    978
+0000138C= 03B7                     375      dc.w    951
+0000138E= 0392                     376      dc.w    914
+00001390= 0362                     377      dc.w    866
+00001392= 0329                     378      dc.w    809
+00001394= 02E7                     379      dc.w    743
+00001396= 029D                     380      dc.w    669
+00001398= 024C                     381      dc.w    588
+0000139A= 01F4                     382      dc.w    500
+0000139C= 0197                     383      dc.w    407
+0000139E= 0135                     384      dc.w    309
+000013A0= 00D0                     385      dc.w    208
+000013A2= 0069                     386      dc.w    105
+000013A4= 0000                     387      dc.w    0       15 seconds
+000013A6                           388  
+000013A6                           389  * Cos of angle formed at 1 second intervals from 12:00 to 3:00 * 1000
+000013A6                           390  cosTable:
+000013A6= 0000                     391      dc.w    0       0 seconds
+000013A8= 0069                     392      dc.w    105
+000013AA= 00D0                     393      dc.w    208
+000013AC= 0135                     394      dc.w    309
+000013AE= 0197                     395      dc.w    407
+000013B0= 01F4                     396      dc.w    500
+000013B2= 024C                     397      dc.w    588
+000013B4= 029D                     398      dc.w    669
+000013B6= 02E7                     399      dc.w    743
+000013B8= 0329                     400      dc.w    809
+000013BA= 0362                     401      dc.w    866
+000013BC= 0392                     402      dc.w    914
+000013BE= 03B7                     403      dc.w    951
+000013C0= 03D2                     404      dc.w    978
+000013C2= 03E3                     405      dc.w    995
+000013C4= 03E8                     406      dc.w    1000
+000013C6                           407  
+000013C6= 63 68 69 6D 65 2E ...    408  chime   dc.b    'chime.wav',0   sound file
+000013D0= 74 69 63 6B 2E 77 ...    409  tick    dc.b    'tick.wav',0
+000013D9= 74 6F 63 6B 2E 77 ...    410  tock    dc.b    'tock.wav',0
+000013E2                           411  
+000013E2                           412      END START
+
+No errors detected
+No warnings generated
+
+
+SYMBOL TABLE INFORMATION
+Symbol-name         Value
+-------------------------
+AM                  10E4
+AQUA                FFFF00
+BLACK               0
+BLUE                FF0000
+CENTERX             D8
+CENTERY             D9
+CHECKHOUR           1170
+CHECKMIN            11BA
+CHIME               13C6
+CHIMECOUNT          80A
+COSTABLE            13A6
+DIAMETER            CC
+DO15                1330
+ERASESEC            11FA
+FUCHSIA             FF00FF
+GETXY               133E
+GRAY                808080
+GREEN               8000
+HANDXY              12D2
+HOURHAND            800
+LIME                FF00
+LOOP                10CE
+LTGRAY              C0C0C0
+MAROON              80
+MINHAND             802
+NAVY                800000
+NOON                41EB00
+NOT12               112A
+OLIVE               8080
+PURPLE              800080
+RED                 FF
+SECHAND             804
+SINTABLE            1386
+SIZE_H              78
+SIZE_M              A0
+SIZE_S              BE
+SOUNDS              112E
+START               1000
+TEAL                808000
+TICK                13D0
+TICKTOCK            1150
+TOCK                13D9
+TOCKWAV             1166
+TRY15               1312
+TRY30               12F4
+WHITE               FFFFFF
+XDIR                806
+YDIR                808
+YELLOW              FFFF

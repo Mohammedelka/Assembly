@@ -1,0 +1,297 @@
+00001000 Starting Address
+Assembler used: EASy68K Editor/Assembler v5.16.01
+Created On: 1/16/2022 9:30:45 PM
+
+00000000                             1  *-----------------------------------------------------------
+00000000                             2  * Title      :
+00000000                             3  * Written by :
+00000000                             4  * Date       :
+00000000                             5  * Description:
+00000000                             6  *-----------------------------------------------------------
+00000000                             7  
+00000000                             8  
+00000000                             9  *
+00000000                            10  
+00000000                            11  WAIT    MACRO
+00000000                            12      move.b  #23,d0          ;trap task 23
+00000000                            13      move.l  #\1,d1          ;Delai de l'attente amount
+00000000                            14      trap    #15
+00000000                            15      ENDM
+00000000                            16  
+00001000                            17          ORG    $1000
+00001000                            18  START:
+00001000  4FFA 0330                 19          LEA     PILE(PC),A7
+00001004  21FC 000010EA 0064        20          MOVE.L  #EMPLOYE,$064        ; adresse interruption bouton 1
+0000100C  21FC 0000113E 007C        21          MOVE.L  #AGENT_S,$07C        ; adresse interruption bouton 7
+00001014                            22  
+00001014                            23  
+00001014                            24  **************************************************************************************************
+00001014                            25  **********************************AFFICHAGE DE L'HEURE STANDARD ***********************************  
+00001014                            26  *************************************************************************************************     
+00001014  303C 0020                 27          MOVE    #32,D0
+00001018  123C 0000                 28          MOVE.B  #0,D1 ;  Afficher le hardware
+0000101C  4E4F                      29          TRAP    #15
+0000101E                            30  
+0000101E  4280                      31  LOOP    CLR.L   D0
+00001020  4281                      32          CLR.L   D1
+00001022  4282                      33          CLR.L   D2
+00001024  4284                      34          CLR.L   D4
+00001026  4285                      35          CLR.L   D5
+00001028  4286                      36          CLR.L   D6
+0000102A  4287                      37          CLR.L   D7
+0000102C  103C 0008                 38          MOVE.B  #8,D0   ; get time
+00001030  4E4F                      39          TRAP    #15
+00001032                            40          ****Conversion en heure minutes et seconds******
+00001032                            41              if.L D1 <hs> #NOON then  ; if time more than 12:00
+0000103C  0481 0041EB00             42                  SUB.L   #NOON,D1     ; we want tu use english time
+00001042                            43              endi
+00001042                            44              
+00001042                            45              **total seconds in D1.W
+00001042  82FC 0064                 46              DIVU    #100,D1
+00001046  2801                      47              MOVE.L  D1,D4           ; save fractionnal seconds
+00001048                            48              *LSR.L   #8,D4
+00001048                            49              *LSR.L   #8,D4 
+00001048  0281 0000FFFF             50              ANDI.L  #$0000FFFF,D1   ; delete frationnal part
+0000104E                            51              **hours in D5
+0000104E  82FC 0E10                 52              DIVU    #3600,D1
+00001052  3A01                      53              MOVE.W  D1,D5           ; save the amount of hours
+00001054  E089                      54              LSR.L   #8,D1
+00001056  E089                      55              LSR.L   #8,D1          ; come to the rest of minutes
+00001058                            56              **minutes in D6
+00001058  82FC 003C                 57              DIVU    #60,D1
+0000105C  3C01                      58              MOVE.W  D1,D6           ; save the amount of minutes
+0000105E  E089                      59              LSR.L   #8,D1
+00001060  E089                      60              LSR.L   #8,D1          ; come to the rest of seconds
+00001062                            61              **seconds in D7
+00001062  3E01                      62              MOVE.W  D1,D7           ; save the amount of seconds
+00001064                            63              
+00001064                            64                  
+00001064                            65          *********Print in 7 segments(and fractional seconds on LEDs**************
+00001064  303C 0020                 66          MOVE    #32,D0
+00001068  123C 0001                 67          MOVE.B  #01,D1 ; get address of 7 segments 
+0000106C  4E4F                      68          TRAP    #15
+0000106E  2641                      69          MOVE.L  D1,A3  ; A3 = Address of 7 segments
+00001070  123C 0002                 70          MOVE.B  #02,D1 ; get address of LEDs
+00001074  4E4F                      71          TRAP    #15
+00001076  2841                      72          MOVE.L  D1,A4  ; A4 = Address of LEDs
+00001078                            73          
+00001078                            74              **hours
+00001078                            75          if.W D5 <eq> #0 then.s  ;if hours = 0
+0000107E  3A3C 000C                 76              MOVE.W  #12,D5
+00001082                            77          endi
+00001082  163C 000A                 78          MOVE.B  #10,D3          ; blank digit code
+00001086                            79          if.B D5 <hi> #9 then    ; if the number > 9
+0000108E  0445 000A                 80              SUB #10,D5
+00001092  163C 0001                 81              MOVE.B  #1,D3       ; Print a 1
+00001096                            82          endi
+00001096  6100 0150                 83          BSR     segment
+0000109A  3605                      84          MOVE.W  D5,D3
+0000109C  6100 014A                 85          BSR     segment
+000010A0                            86              
+000010A0                            87              **dash
+000010A0  363C 000B                 88          MOVE.W  #11,D3
+000010A4  6100 0142                 89          BSR     segment
+000010A8                            90              **minutes
+000010A8  8CFC 000A                 91          DIVU    #10,D6
+000010AC  3606                      92          MOVE.W  D6,D3           ; Print 10's minute digit
+000010AE  6100 0138                 93          BSR     segment
+000010B2  E08E                      94          LSR.L   #8,D6
+000010B4  E08E                      95          LSR.L   #8,D6           ; come to the 1's minute digit
+000010B6  3606                      96          MOVE.W  D6,D3           ; Print 1's minute digit
+000010B8  6100 012E                 97          BSR     segment
+000010BC                            98              **dash
+000010BC  363C 000B                 99          MOVE.W  #11,D3
+000010C0  6100 0126                100          BSR     segment
+000010C4                           101              **seconds
+000010C4  8EFC 000A                102          DIVU    #10,D7
+000010C8  3607                     103          MOVE.W  D7,D3           ; Print 10's second digit
+000010CA  6100 011C                104          BSR     segment
+000010CE  E08F                     105          LSR.L   #8,D7
+000010D0  E08F                     106          LSR.L   #8,D7           ; come to the 1's second digit
+000010D2  3607                     107          MOVE.W  D7,D3           ; Print 1's second digit
+000010D4  6100 0112                108          BSR     segment
+000010D8  4E71                     109          NOP
+000010DA                           110              **fractionnal seconds
+000010DA  4844                     111          SWAP    D4
+000010DC  1884                     112          MOVE.B  D4,(A4)
+000010DE                           113m         WAIT   1           ; wait 1 hundreth seconds
+000010E6  6000 FF36                114          BRA     LOOP
+000010EA                           115          
+000010EA                           116          
+000010EA                           117  ***************************************************************************        
+000010EA                           118  *************************INTERRUPTION 1: EMPLOYE bouton poussoir 1****************************
+000010EA                           119  ***************************************************************************        
+000010EA                           120  
+000010EA  41FA 0156                121  EMPLOYE LEA ACCES_LIST(PC),A0
+000010EE  43FA 0104                122          LEA BIENVENUE(PC),A1
+000010F2  6100 00E4                123          BSR AFF_MSG
+000010F6                           124          **Lecture du code dans (A1)
+000010F6  6100 00E8                125          BSR INCLAV
+000010FA  2A49                     126          MOVE.L  A1,A5
+000010FC                           127          **on vérifie le code
+000010FC  7408                     128          MOVE.L  #8,D2       ; il y a 8 codes possibles
+000010FE  7001                     129          MOVE.L  #1,D0       ; booleen de vérification
+00001100                           130          repeat
+00001100  7001                     131              MOVE.L  #1,D0       ; booleen de vérification
+00001102  4284                     132              CLR.L   D4
+00001104                           133              for.L D4 = #1 to #4 do     ; chaque code a 4 chiffres
+0000110A                           134                  if.B   (A1)+ <ne> (A0)+ then
+00001110  7000                     135                      MOVE.L  #0,D0
+00001112                           136                  endi
+00001112                           137              endf
+0000111C  224D                     138              MOVE.L  A5,A1
+0000111E  5288                     139              ADD.L   #1,A0   ; on saute le 0
+00001120  5382                     140              SUB.L   #1,D2
+00001122                           141          until.B D0 <eq> #1 or.L D2 <eq> #0 do
+00001130                           142          
+00001130                           143          if.B D0 <eq> #1 then    
+00001138  6100 000E                144              BSR     OPEN
+0000113C                           145          endi
+0000113C  4E73                     146          RTE
+0000113E                           147  
+0000113E                           148  
+0000113E                           149  ***************************************************************************        
+0000113E                           150  *************************INTERRUPTION 2: AGENT DE SECURITE bouton pousoir 2*****************
+0000113E                           151  *************************************************************************** 
+0000113E  6100 0008                152  AGENT_S     BSR     OPEN   ; L'employé a juste à appuyer sur le bouton
+00001142  4E73                     153              RTE
+00001144                           154  
+00001144                           155  
+00001144  FFFF FFFF                156      SIMHALT             ; halt simulator
+00001148                           157  
+00001148                           158  *************************Sous programme**********************************
+00001148                           159  
+00001148                           160  OPEN    ***LEDs***
+00001148  303C 0020                161          MOVE    #32,D0
+0000114C  123C 0002                162          MOVE.B  #02,D1 ; get address of LEDs
+00001150  4E4F                     163          TRAP    #15
+00001152  2841                     164          MOVE.L  D1,A4  ; A4 = Address of LEDs
+00001154  18BC 0003                165          MOVE.B  #03,(A4)    ; allume 2 LEDs de poid faible
+00001158                           166          ***Switch ON
+00001158  123C 0002                167          MOVE.B  #02,D1 ; get address of switch
+0000115C  4E4F                     168          TRAP    #15
+0000115E  2A41                     169          MOVE.L  D1,A5  ; A5 = Address of switch
+00001160  1ABC 0001                170          MOVE.B  #01,(A5)    ; positionne le switch 0 à ON
+00001164                           171  
+00001164                           172  
+00001164                           173          ***7 segment***
+00001164  303C 0020                174          MOVE    #32,D0
+00001168  123C 0001                175          MOVE.B  #01,D1 ; get address of 7 segments 
+0000116C  4E4F                     176          TRAP    #15
+0000116E  2641                     177          MOVE.L  D1,A3  ; A3 = Address of 7 segments
+00001170  760A                     178          MOVE.L  #10,D3
+00001172                           179          for D4 = #0 to #7 do    ;effacer l'afficheur
+0000117A  6100 006C                180              BSR segment
+0000117E                           181          endf
+00001186                           182          
+00001186  123C 0001                183          MOVE.B  #01,D1 ; get address of 7 segments 
+0000118A  4E4F                     184          TRAP    #15
+0000118C  2641                     185          MOVE.L  D1,A3  ; A3 = Address of 7 segments
+0000118E                           186  
+0000118E  7600                     187          MOVE.L  #0,D3       ; lettre O
+00001190  6100 0056                188          BSR     segment
+00001194  760C                     189          MOVE.L  #12,D3       ; lettre P
+00001196  6100 0050                190          BSR     segment
+0000119A  760D                     191          MOVE.L  #13,D3       ; lettre E
+0000119C  6100 004A                192          BSR     segment
+000011A0  760E                     193          MOVE.L  #14,D3       ; lettre N
+000011A2  6100 0044                194          BSR     segment
+000011A6                           195m         WAIT    100
+000011AE                           196          
+000011AE                           197          ****5 seconds***
+000011AE  588B                     198          ADD.L   #4,A3
+000011B0  7600                     199          MOVE.L  #0,D3       ; chiffre 0
+000011B2  6100 0034                200          BSR     segment
+000011B6                           201          
+000011B6                           202          for.L D4 = #5 downto #1 do    ;afficher les secondes de 5 à 1
+000011BC  2604                     203              MOVE.L  D4,D3
+000011BE  6100 0028                204              BSR segment
+000011C2  558B                     205              SUB.L   #2,A3
+000011C4                           206m             WAIT    100
+000011CC                           207          endf
+000011D6                           208          
+000011D6  4E75                     209          RTS
+000011D8                           210  
+000011D8                           211  
+000011D8                           212  
+000011D8                           213  
+000011D8  103C 000D                214  AFF_MSG MOVE.B  #13,D0
+000011DC  4E4F                     215          TRAP    #15
+000011DE  4E75                     216          RTS
+000011E0                           217          
+000011E0  303C 0002                218  INCLAV  MOVE    #02,D0
+000011E4  4E4F                     219          TRAP    #15
+000011E6  4E75                     220          RTS
+000011E8                           221  
+000011E8                           222  
+000011E8                           223  **Affiche l'element contenue dans D3 sur le segment pointé par A3
+000011E8                           224  segment 
+000011E8  4DFA 0049                225          LEA    digits(PC),A6
+000011EC  16B6 3000                226          MOVE.B (A6,D3),(A3)
+000011F0  548B                     227          ADD.L   #2,A3
+000011F2  4E75                     228          RTS  
+000011F4                           229         
+000011F4                           230  ************Variables*************************************************************************
+000011F4                           231  
+000011F4= 42 69 65 6E 76 65 ...    232  BIENVENUE   DC.B    'Bienvenue à vous. Entrez votre code PIN pour vous identifier: ', 0
+00001233                           233  
+00001233                           234  
+00001233                           235  
+00001233                           236  
+00001233                           237  *modèle des bits pour former les chiffre de 0 à 9, vide, tiret, P, E, N
+00001233= 3F 06 5B 4F 66 6D ...    238  digits  DC.B     $3F,$06,$5B,$4F,$66,$6D,$7D,$07,$7F,$6F,$00,$40,$73,$79,$54
+00001242                           239      ds.w  0             force word boundary
+00001242                           240  
+00001242= 41 42 43 44 00           241  ACCES_LIST  DC.B    'ABCD',0
+00001247= 41 42 31 32 00           242              DC.B    'AB12',0
+0000124C= 31 32 33 34 00           243              DC.B    '1234',0
+00001251= 41 44 4D 49 00           244              DC.B    'ADMI',0
+00001256= 45 4D 50 31 00           245              DC.B    'EMP1',0
+0000125B= 45 4D 50 32 00           246              DC.B    'EMP2',0
+00001260= 45 4D 50 33 00           247              DC.B    'EMP3',0
+00001265= 45 4D 50 34 00           248              DC.B    'EMP4',0
+0000126A                           249  
+0000126A                           250  
+0000126A                           251          DS      100
+00001332                           252  PILE    DS      1
+00001334                           253  
+00001334  =0041EB00                254  NOON    EQU 12*60*60*100
+00001334                           255  
+00001334                           256  
+00001334                           257  
+00001334                           258      END    START        ; last line of source
+
+No errors detected
+No warnings generated
+
+
+SYMBOL TABLE INFORMATION
+Symbol-name         Value
+-------------------------
+ACCES_LIST          1242
+AFF_MSG             11D8
+AGENT_S             113E
+BIENVENUE           11F4
+DIGITS              1233
+EMPLOYE             10EA
+INCLAV              11E0
+LOOP                101E
+NOON                41EB00
+OPEN                1148
+PILE                1332
+SEGMENT             11E8
+START               1000
+WAIT                0
+_00000000           1042
+_00000001           1082
+_00000002           1096
+_00000003           1112
+_00000004           113C
+_20000000           110A
+_20000001           1114
+_20000002           117A
+_20000003           1180
+_20000004           11BC
+_20000005           11CE
+_30000000           1100
+_30000001           1130
